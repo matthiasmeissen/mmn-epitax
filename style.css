@@ -1,11 +1,19 @@
 body {
     font-family: sans-serif;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 40px;
     background-color: #ffffff;
+}
+
+#artboard-container {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
 }
 
 .artboard-instance {
