@@ -1,3 +1,3 @@
 # MMN Substrate
 
-Grow fonts on substrate.
+Build fonts on substrate.
