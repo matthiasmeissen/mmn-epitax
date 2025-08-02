@@ -79,15 +79,32 @@ function parseSVGPath(pathData, opentypePath) {
 // --- MAIN APP (The Orchestrator) ---
 class FontEditorApp {
     constructor(containerId, initialGlyphs) {
+        this.config = {
+            GRID_ROWS: 8,
+            GRID_COLS: 6,
+            CELL_SIZE: 100,
+            DESCENDER_ROWS: 2, // Rows below the baseline
+            X_HEIGHT_ROWS: 4,  // Rows from baseline to x-height line (CHANGED from 3 to 4)
+        };
+
+        this.metrics = {
+            artboardWidth: this.config.GRID_COLS * this.config.CELL_SIZE,
+            artboardHeight: this.config.GRID_ROWS * this.config.CELL_SIZE,
+            // Calculate the baseline's Y position in the SVG coordinate system
+            baselineY: (this.config.GRID_ROWS - this.config.DESCENDER_ROWS) * this.config.CELL_SIZE,
+            // The font's ascender value is the space above the baseline
+            ascender: (this.config.GRID_ROWS - this.config.DESCENDER_ROWS) * this.config.CELL_SIZE,
+            // The font's descender value is the space below (must be negative)
+            descender: -(this.config.DESCENDER_ROWS * this.config.CELL_SIZE),
+        };
+
         this.container = document.getElementById(containerId);
-        // Try to load from localStorage, otherwise create a fresh state.
         this.appState = this.loadState() || this.createInitialState(initialGlyphs);
         this.glyphControllers = [];
 
         this.initDOM();
         this.setupGlobalListeners();
 
-        // Save state periodically. A simple interval is fine for this use case.
         setInterval(() => this.saveState(), 2000);
     }
 
@@ -101,13 +118,13 @@ class FontEditorApp {
                 familyName: "MyCustomFont",
                 styleName: "Regular",
                 unitsPerEm: 1000,
-                ascender: 800,
-                descender: -200
+                ascender: this.metrics.ascender,
+                descender: this.metrics.descender,
             },
             glyphs: glyphs.map(g => ({
                 character: g.letter,
                 unicode: g.unicode,
-                shapes: [] // Start with no drawn shapes
+                shapes: []
             }))
         };
     }
@@ -153,7 +170,7 @@ class FontEditorApp {
             instanceDiv.appendChild(button);
             this.container.appendChild(instanceDiv);
 
-            const controller = new GlyphController(glyphData, { svg, button }, this);
+            const controller = new GlyphController(glyphData, { svg, button }, this, this.config);
             this.glyphControllers.push(controller);
         });
     }
@@ -209,16 +226,17 @@ class FontEditorApp {
     //
 
     mergePathsWithPaperJS(shapes) {
-        const artboardHeight = 800;
+        const baselineY = this.metrics.baselineY;
+
         if (shapes.length === 0) return "";
 
-        paper.setup(new paper.Size(600, 800));
+        paper.setup(new paper.Size(this.metrics.artboardWidth, this.metrics.artboardHeight));
         let mergedPath = null;
 
         shapes.forEach(shape => {
             const pathPoints = shape.vertices.map(point => {
-                const flippedY = artboardHeight - point.y;
-                return new paper.Point(point.x, flippedY);
+                const finalY = baselineY - point.y;
+                return new paper.Point(point.x, finalY);
             });
 
             const newPath = new paper.Path(pathPoints);
@@ -230,8 +248,6 @@ class FontEditorApp {
         paper.project.clear();
         return finalPathData;
     }
-
-    // INSIDE THE FontEditorApp CLASS
 
     createFont() {
         const glyphs = [];
@@ -287,34 +303,57 @@ class FontEditorApp {
 
 // --- VIEW (The Renderer) ---
 class GlyphView {
-    constructor(svgElement) {
+    constructor(svgElement, config) {
         this.svg = svgElement;
         this.svgNS = "http://www.w3.org/2000/svg";
-        this.COLS = 6;
-        this.ROWS = 8;
-        this.CELL_SIZE = 100;
+        this.config = config;
+
         this.createGrid();
     }
 
+
     createGrid() {
-        this.svg.innerHTML = '';
+        this.svg.innerHTML = ''; // Clear everything first
+
+        // Create a group for the grid cells to keep them organized
         const gridGroup = document.createElementNS(this.svgNS, 'g');
         gridGroup.setAttribute('class', 'grid-group');
         this.svg.appendChild(gridGroup);
 
-        for (let y = 0; y < this.ROWS; y++) {
-            for (let x = 0; x < this.COLS; x++) {
+        // Loop through rows and columns to create the grid cells
+        for (let y = 0; y < this.config.GRID_ROWS; y++) {
+            for (let x = 0; x < this.config.GRID_COLS; x++) {
                 const cell = document.createElementNS(this.svgNS, 'rect');
                 cell.setAttribute('class', 'grid-cell');
-                cell.setAttribute('x', x * this.CELL_SIZE);
-                cell.setAttribute('y', y * this.CELL_SIZE);
-                cell.setAttribute('width', this.CELL_SIZE);
-                cell.setAttribute('height', this.CELL_SIZE);
+                cell.setAttribute('x', x * this.config.CELL_SIZE);
+                cell.setAttribute('y', y * this.config.CELL_SIZE);
+                cell.setAttribute('width', this.config.CELL_SIZE);
+                cell.setAttribute('height', this.config.CELL_SIZE);
                 cell.dataset.x = x;
                 cell.dataset.y = y;
                 gridGroup.appendChild(cell);
             }
         }
+
+        const baselineY = (this.config.GRID_ROWS - this.config.DESCENDER_ROWS) * this.config.CELL_SIZE;
+        const xHeightY = baselineY - (this.config.X_HEIGHT_ROWS * this.config.CELL_SIZE);
+        const artboardWidth = this.config.GRID_COLS * this.config.CELL_SIZE;
+
+        const baseline = document.createElementNS(this.svgNS, 'line');
+        baseline.setAttribute('class', 'baseline');
+        baseline.setAttribute('x1', 0);
+        baseline.setAttribute('y1', baselineY); // Use calculated value
+        baseline.setAttribute('x2', artboardWidth);
+        baseline.setAttribute('y2', baselineY); // Use calculated value
+        this.svg.appendChild(baseline);
+
+        const xHeightLine = document.createElementNS(this.svgNS, 'line');
+        xHeightLine.setAttribute('class', 'x-height-line');
+        xHeightLine.setAttribute('x1', 0);
+        xHeightLine.setAttribute('y1', xHeightY); // Use calculated value
+        xHeightLine.setAttribute('x2', artboardWidth);
+        xHeightLine.setAttribute('y2', xHeightY); // Use calculated value
+        this.svg.appendChild(xHeightLine);
     }
 
     render(shapes) {
@@ -349,19 +388,17 @@ class GlyphView {
 
 // --- CONTROLLER (The Logic) ---
 class GlyphController {
-    constructor(glyphData, domElements, app) {
+    constructor(glyphData, domElements, app, config) {
         this.character = glyphData.character;
-        this.dom = domElements; // { svg, button }
-        this.app = app; // Reference to the main FontEditorApp
+        this.dom = domElements;
+        this.app = app;
 
-        // Each controller has its own view
-        this.view = new GlyphView(this.dom.svg);
+        this.config = config;
+        this.view = new GlyphView(this.dom.svg, config);
 
-        // State for the drawing process
         this.firstSelection = null;
-
         this.attachEventListeners();
-        this.render(); // Initial render
+        this.render();
     }
 
     getData() {
@@ -391,8 +428,9 @@ class GlyphController {
         const viewBox = this.dom.svg.viewBox.baseVal;
         const svgWidth = this.dom.svg.clientWidth;
         const scale = viewBox.width / svgWidth;
-        const clickX = (pointInSVG.x * scale) % this.view.CELL_SIZE;
-        const clickY = (pointInSVG.y * scale) % this.view.CELL_SIZE;
+
+        const clickX = (pointInSVG.x * scale) % this.config.CELL_SIZE;
+        const clickY = (pointInSVG.y * scale) % this.config.CELL_SIZE;
 
         const vertices = this.getVerticesFromClick(cell, clickX, clickY);
 
@@ -426,16 +464,23 @@ class GlyphController {
     }
 
     getVerticesFromClick(cell, clickX, clickY) {
-        const { CELL_SIZE } = this.view;
+        const { CELL_SIZE } = this.config;
+
         const cellX = parseInt(cell.dataset.x, 10) * CELL_SIZE;
         const cellY = parseInt(cell.dataset.y, 10) * CELL_SIZE;
         const corners = { tl: { x: cellX, y: cellY }, tr: { x: cellX + CELL_SIZE, y: cellY }, bl: { x: cellX, y: cellY + CELL_SIZE }, br: { x: cellX + CELL_SIZE, y: cellY + CELL_SIZE } };
         const isTop = clickY < CELL_SIZE / 2;
         const isLeft = clickX < CELL_SIZE / 2;
-        if (isTop && isLeft) return [corners.tr, corners.tl, corners.bl];
-        if (isTop && !isLeft) return [corners.tl, corners.tr, corners.br];
-        if (!isTop && isLeft) return [corners.tl, corners.bl, corners.br];
-        return [corners.bl, corners.br, corners.tr];
+        const key = `${isTop ? 't' : 'b'}${isLeft ? 'l' : 'r'}`;
+
+        const vertexMap = {
+            'tl': [corners.tr, corners.tl, corners.bl],
+            'tr': [corners.tl, corners.tr, corners.br],
+            'bl': [corners.tl, corners.bl, corners.br],
+            'br': [corners.bl, corners.br, corners.tr]
+        };
+
+        return vertexMap[key];
     }
 }
 

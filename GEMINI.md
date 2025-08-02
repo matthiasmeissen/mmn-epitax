@@ -1,117 +1,106 @@
 # Architecture Guide: Modular Web-Based Font Editor
 
-This document outlines the software architecture for building a web-based graphic design tool that allows users to create and download their own fonts. The primary goal is to create a system that is modular, easy to understand, debug, and extend. This guide reflects the latest version, including user experience improvements and bug fixes.
+This document outlines the software architecture for building a web-based graphic design tool that allows users to create and download their own fonts. The primary goal is to create a system that is modular, easy to understand, debug, and extend. This guide reflects the latest version, including a modular typographic grid and other user experience improvements.
 
 ## 1. Core Philosophy: Separation of Concerns
 
-To achieve our goal, we will use a design pattern similar to **Model-View-Controller (MVC)**. This pattern separates the application's data (the Model) from the user interface (the View) and the application's logic (the Controller).
+To achieve our goal, we use a design pattern similar to **Model-View-Controller (MVC)**. This pattern separates the application's data from its UI and logic.
 
-*   **Model:** The single source of truth for all data in the application.
-*   **View:** The visual representation of the Model (the SVG on the screen).
+*   **Model:** The application's data and configuration. This is the single source of truth.
+*   **View:** The visual representation of the Model (the SVG grids and shapes on the screen).
 *   **Controller:** The logic that handles user input and updates the Model.
 
-This separation prevents complex bugs and makes adding new features (like `undo/redo`) much simpler in the future.
+This separation prevents complex bugs and makes adding new features much simpler.
 
-## 2. The Model: A Single Source of Truth
+## 2. The Model & Configuration
 
-The most critical part of this architecture is that the application's state is not stored in the HTML/SVG DOM. Instead, it's held in a single, comprehensive JavaScript object. This object is the "Model".
+The application has two primary data structures: a central configuration that defines the environment, and the application state that holds the user's work.
 
-### `AppState` Structure
+### The Configuration (`config` and `metrics`)
+To make the tool flexible, we define a single `config` object in the main `FontEditorApp`. This object controls the entire grid system and typographic rules. From this, a `metrics` object is derived to calculate values used throughout the app.
 
-The entire state of the font being designed will be stored in an object, let's call it `AppState`.
+```javascript
+// Example config in FontEditorApp
+this.config = {
+    GRID_ROWS: 8,
+    GRID_COLS: 6,
+    CELL_SIZE: 100,
+    DESCENDER_ROWS: 2, // Rows below the baseline
+    X_HEIGHT_ROWS: 4,  // Rows from baseline to x-height
+};
+```
+This single object dictates the size of the artboards, the position of the baseline, the ascender/descender values for the font, and the position of visual guides.
+
+### The Application State (`AppState`)
+The `AppState` object holds all the user-created data.
 
 ```json
 {
-    "fontSettings": {
-        "familyName": "MyCustomFont",
-        "styleName": "Regular",
-        "unitsPerEm": 1000,
-        "ascender": 800,
-        "descender": -200
-    },
+    "fontSettings": { /* Derived from the metrics object */ },
     "glyphs": [
         {
             "character": "A",
             "unicode": 65,
-            "shapes": [
-                {
-                    "id": "shape-168937498",
-                    "vertices": [
-                        { "x": 100, "y": 0 }, { "x": 0, "y": 200 }, { "x": 200, "y": 200 }
-                    ]
-                }
-            ]
+            "shapes": [ /* Array of user-drawn shapes */ ]
         }
     ]
 }
 ```
 
 **Key Advantages:**
-*   **Persistence:** This object is automatically saved to the browser's `localStorage`. This means the user's work is preserved between sessions.
-*   **Debugging:** At any point, we can `console.log(AppState)` to see the exact state of the entire application.
-*   **Decoupling:** The data is not tied to SVG. We could use this same state to render to a `<canvas>` or any other format.
+*   **Modularity:** To change the entire tool's typographic layout (e.g., a 3-row x-height), only one value in the `config` object needs to be changed.
+*   **Persistence:** The `AppState` object is automatically saved to `localStorage`, preserving the user's work between sessions.
+*   **Decoupling:** The data is not tied to SVG. The same state could be rendered in other ways.
 
 ## 3. The Class Structure
 
-We will structure our application into three main classes that embody the MVC pattern.
+The application is structured into three classes that embody the MVC pattern.
 
 ### `FontEditorApp` (The Main Orchestrator)
-This class manages the overall application.
-
 *   **Responsibilities:**
-    *   Holds the master `AppState` object.
-    *   On startup, it first tries to load state from `localStorage`. If no state is found, it creates a new default state.
-    *   Initializes the application layout, creating an artboard instance for each glyph defined in the state.
-    *   Creates and manages an array of `GlyphController` instances.
-    *   Provides methods for controllers to call to update the central state (e.g., `addShapeToGlyph`, `resetGlyph`).
-    *   Handles global actions via the **"Download Font"** and **"Start New Font"** buttons.
+    *   Defines the master `config` object and calculates the derived `metrics`.
+    *   Holds the `AppState` object (loading from `localStorage` or creating a default state).
+    *   Initializes the DOM and creates a `GlyphController` for each glyph, passing the `config` to it.
+    *   Handles global actions like **"Download Font"** and **"Start New Font"**.
 
 ### `GlyphController` (The Logic)
-An instance of this class is created for *each* letter's artboard.
-
 *   **Responsibilities:**
-    *   Manages the logic for a single glyph (e.g., the letter 'A').
-    *   Listens for user input events (`click`) on its specific SVG artboard.
-    *   Contains the logic for processing user input (e.g., calculating vertices for a new shape from clicks).
-    *   When a new shape needs to be created, it **does not modify the DOM directly**. Instead, it calls a method on the main `FontEditorApp` instance, passing the new shape data.
-    *   Holds an instance of a `GlyphView`.
-    *   Triggers its `GlyphView` to re-render whenever its data changes.
+    *   Receives the `config` object from the `FontEditorApp`.
+    *   Manages user interaction logic for a single glyph's artboard.
+    *   Uses the `config` for its internal calculations (e.g., detecting click location).
+    *   When a shape is created, it tells `FontEditorApp` to update the state.
+    *   Instantiates and manages a `GlyphView`, passing the `config` to it.
 
 ### `GlyphView` (The Renderer)
-This is a "dumb" class responsible only for visual representation.
-
 *   **Responsibilities:**
-    *   Manages a single SVG element.
-    *   Has a `render(shapes)` method that takes an array of shape data.
-    *   The `render` method first clears any previously drawn shapes. Then, it iterates through the `shapes` array and creates a `<polygon>` SVG element for each one.
-    *   It knows *what* to draw, but not *why* or *how* the data was created.
+    *   Receives the `config` object from its `GlyphController`.
+    *   Dynamically draws the grid and typographic guides (baseline, x-height) based on the rules in the `config`.
+    *   Renders the user-created shapes from the `AppState` onto the SVG artboard.
 
 ## 4. The Data Flow: A Step-by-Step Example
 
-Understanding the flow of data is key. Let's trace what happens when a user draws a new polygon on the letter 'B'.
-
-1.  **User Action:** The user clicks twice on the grid within the SVG artboard for the letter 'B'.
-2.  **Controller Catches Event:** The `GlyphController` for 'B' has an event listener on the SVG. Its `onCellClick` handler fires.
-3.  **Controller Processes Logic:** The controller's logic runs, calculating the final vertices of the new polygon based on the two clicks.
-4.  **Controller Updates Model (Indirectly):** The 'B' `GlyphController` calls `this.app.addShapeToGlyph('B', { id: '...', vertices: [...] })`.
-5.  **Main App Updates State:** The `FontEditorApp` finds the 'B' object inside its `this.appState.glyphs` array and pushes the new shape object into its `shapes` array. The app automatically saves the updated `AppState` to `localStorage`.
-6.  **View is Re-Rendered:** The `FontEditorApp` calls the `render()` method on the 'B' `GlyphController`.
-7.  **Render Execution:** The `GlyphController` gets the fresh data for 'B' from the `AppState` and passes it to its `GlyphView`. The `GlyphView` redraws all the polygons for 'B', and the new shape appears on the screen.
+1.  **Initialization:** `FontEditorApp` creates its `config` object. It then loops through the glyphs, creating a `GlyphController` for each and passing the `config` down. The controller, in turn, creates a `GlyphView`, also passing the `config`. The view uses the config to draw its grid and guides.
+2.  **User Action:** A user clicks on the grid for the letter 'B'.
+3.  **Controller Catches Event:** The `GlyphController` for 'B' handles the click. It uses its copy of the `config` to correctly calculate which part of the grid was clicked.
+4.  **Controller Processes Logic:** After two clicks, the controller calculates the final vertices for the new polygon.
+5.  **Controller Updates Model (Indirectly):** The controller calls `this.app.addShapeToGlyph('B', { ...shapeData })`.
+6.  **Main App Updates State:** `FontEditorApp` pushes the new shape into the `AppState`. The app then periodically saves the entire `AppState` to `localStorage`.
+7.  **View is Re-Rendered:** `FontEditorApp` tells the 'B' controller to re-render. The controller gets the latest shape data and passes it to its `GlyphView`, which draws the new polygon on screen.
 
 ## 5. Key Implementation Details
 
-### Application Initialization
-The application should be started from a `DOMContentLoaded` event listener.
-1.  A helper function (`createAsciiGlyphSet`) generates an array of all printable ASCII characters (codes 33-126).
-2.  This array is passed to the constructor of a new `FontEditorApp` instance, ensuring the tool is immediately useful with a full character set.
+### Centralized Configuration
+The `config` object in `FontEditorApp` is the single source of truth for all layout and typographic rules. This makes the entire application highly modular and easy to adjust.
 
-### Font Generation
-Generating the downloadable font file is a two-step process handled inside `FontEditorApp`:
-1.  **Merge Shapes:** The `mergePathsWithPaperJS` method takes the array of shapes for a glyph and uses the `paper.js` library to unite them into a single, combined shape. It returns this shape as an SVG path data string (e.g., `"M10 10 L20 20 Z"`).
-2.  **Parse Path Data:** The `createFont` method iterates through each glyph. For each one, it creates a new `opentype.Path`. Since `opentype.js` does not have a built-in function to parse SVG path strings, we use a custom helper function, `parseSVGPath`, to read the string from the previous step and convert it into a series of `moveTo`, `lineTo`, etc. commands that `opentype.js` can understand.
+### Dynamic Typographic Guides
+The `GlyphView` does not contain any hardcoded numbers for layout. It calculates the `y` positions for the baseline and x-height lines based entirely on the `config` object it receives, ensuring the visual guides always match the underlying font metrics.
 
-### Starting a New Project
-The "Start New Font" button provides a crucial user function:
-*   It first asks the user for confirmation to prevent accidental data loss.
-*   If confirmed, it calls `localStorage.removeItem('fontDesignerState')` to delete the saved work.
-*   It then immediately calls `window.location.reload()` to restart the application. Since the saved state is gone, the app will initialize with the default ASCII character set.
+### Font Generation & Coordinate System
+Generating the downloadable font file requires a crucial coordinate transformation:
+1.  **Merge Shapes:** `mergePathsWithPaperJS` uses `paper.js` to unite a glyph's shapes into a single SVG path data string.
+2.  **Transform Coordinates:** During this process, it converts the SVG's top-down coordinate system to `opentype.js`'s baseline-centric system. It does this using the `baselineY` value from the `metrics` object, ensuring a point drawn on the visual baseline becomes `y=0` in the final font.
+3.  **Parse Path Data:** The custom `parseSVGPath` function reads the generated SVG path string and translates it into commands for `opentype.js`.
+
+### Application Initialization & Reset
+*   **Initialization:** The app starts by generating the full printable ASCII character set, making it useful immediately.
+*   **Reset:** The "Start New Font" button allows users to clear the `localStorage` and reload the application, giving them a clean slate based on the default ASCII set.

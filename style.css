@@ -57,6 +57,16 @@ body {
     pointer-events: none;
 }
 
+.baseline {
+    stroke: #007bff;
+    stroke-width: 4;
+}
+
+.x-height-line {
+    stroke: #ff5500;
+    stroke-width: 4;
+}
+
 .reset-button {
     padding: 8px 16px;
     font-size: 14px;
