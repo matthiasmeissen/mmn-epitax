@@ -159,3 +159,169 @@ document.addEventListener('DOMContentLoaded', () => {
         new Artboard(instanceElement);
     });
 });
+
+function parseSVGPath(pathData, opentypePath) {
+    const commands = pathData.match(/[a-df-z][^a-df-z]*/ig);
+
+    let currentX = 0, currentY = 0;
+    let ctrlX = 0, ctrlY = 0;
+
+    commands.forEach(commandString => {
+        const command = commandString[0];
+        const args = commandString.slice(1).trim().split(/[\s,]+/).map(parseFloat);
+
+        const updateControlPoints = (x1, y1) => {
+            ctrlX = x1;
+            ctrlY = y1;
+        };
+
+        switch (command) {
+            case 'M':
+                currentX = args[0];
+                currentY = args[1];
+                opentypePath.moveTo(currentX, currentY);
+                break;
+            case 'm':
+                currentX += args[0];
+                currentY += args[1];
+                opentypePath.moveTo(currentX, currentY);
+                break;
+
+            case 'L':
+                currentX = args[0];
+                currentY = args[1];
+                opentypePath.lineTo(currentX, currentY);
+                break;
+            case 'l':
+                currentX += args[0];
+                currentY += args[1];
+                opentypePath.lineTo(currentX, currentY);
+                break;
+
+            case 'H':
+                currentX = args[0];
+                opentypePath.lineTo(currentX, currentY);
+                break;
+            case 'h':
+                currentX += args[0];
+                opentypePath.lineTo(currentX, currentY);
+                break;
+
+            case 'V':
+                currentY = args[0];
+                opentypePath.lineTo(currentX, currentY);
+                break;
+            case 'v':
+                currentY += args[0];
+                opentypePath.lineTo(currentX, currentY);
+                break;
+
+            case 'Q':
+                ctrlX = args[0];
+                ctrlY = args[1];
+                currentX = args[2];
+                currentY = args[3];
+                opentypePath.quadTo(ctrlX, ctrlY, currentX, currentY);
+                break;
+            case 'q':
+                opentypePath.quadTo(currentX + args[0], currentY + args[1], currentX + args[2], currentY + args[3]);
+                ctrlX = currentX + args[0];
+                ctrlY = currentY + args[1];
+                currentX += args[2];
+                currentY += args[3];
+                break;
+
+            case 'C':
+                ctrlX = args[2];
+                ctrlY = args[3];
+                currentX = args[4];
+                currentY = args[5];
+                opentypePath.curveTo(args[0], args[1], ctrlX, ctrlY, currentX, currentY);
+                break;
+            case 'c':
+                opentypePath.curveTo(currentX + args[0], currentY + args[1], currentX + args[2], currentY + args[3], currentX + args[4], currentY + args[5]);
+                ctrlX = currentX + args[2];
+                ctrlY = currentY + args[3];
+                currentX += args[4];
+                currentY += args[5];
+                break;
+
+            case 'Z':
+            case 'z':
+                opentypePath.closePath();
+                break;
+        }
+    });
+}
+
+function getPathDataFromArtboard() {
+    const shapes = document.querySelectorAll('.artboard .generated-shape');
+    let finalPathData = '';
+
+    shapes.forEach(polygon => {
+        const points = polygon.getAttribute('points').trim();
+        if (points) {
+            // Convert polygon points to a path string: M(ove) to the first point,
+            // L(ine) to the subsequent points, and Z(close) the path.
+            const pathSegment = 'M' + points.replace(/\s+/g, 'L') + 'Z';
+            finalPathData += pathSegment + ' ';
+        }
+    });
+
+    return finalPathData.trim();
+}
+
+function createFont() {
+    const svgPathData = getPathDataFromArtboard();
+
+    // If the user hasn't drawn anything, don't create a broken font.
+    if (!svgPathData) {
+        alert("The artboard is empty! Please draw a shape first.");
+        return null; // Return null to indicate failure
+    }
+
+    const path = new opentype.Path();
+
+    try {
+        if (typeof path.fromSVG === 'function') {
+            path.fromSVG(svgPathData);
+        } else {
+            throw new Error('fromSVG not available');
+        }
+    } catch (e) {
+        console.log('Using manual SVG parsing');
+        parseSVGPath(svgPathData, path);
+    }
+
+    const glyph = new opentype.Glyph({
+        name: 'Triangle',
+        unicode: 65,
+        advanceWidth: 100,
+        path: path
+    });
+
+    const notdefGlyph = new opentype.Glyph({
+        name: '.notdef',
+        unicode: 0,
+        advanceWidth: 100,
+        path: new opentype.Path()
+    });
+
+    const font = new opentype.Font({
+        familyName: 'MyTriangleFont',
+        styleName: 'Medium',
+        unitsPerEm: 1000,
+        ascender: 800,
+        descender: -200,
+        glyphs: [notdefGlyph, glyph]
+    });
+
+    return font;
+}
+
+document.getElementById('downloadButton').addEventListener('click', function () {
+    const font = createFont();
+    if (font) {
+        font.download();
+    }
+});
