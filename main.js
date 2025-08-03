@@ -176,7 +176,6 @@ class FontEditorApp {
     }
 
     setupGlobalListeners() {
-        // This listener already exists
         document.getElementById('downloadButton').addEventListener('click', () => {
             const font = this.createFont();
             if (font) {
@@ -289,7 +288,7 @@ class FontEditorApp {
         const fontName = `MMN Epitax ${uniqueId}`;
 
         const font = new opentype.Font({
-            familyName: fontName,
+            familyName: "MMN Epitax V0.1",
             styleName: this.appState.fontSettings.styleName,
             unitsPerEm: this.appState.fontSettings.unitsPerEm,
             ascender: this.appState.fontSettings.ascender,
