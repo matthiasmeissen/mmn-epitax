@@ -2,7 +2,6 @@ const template = document.createElement('template');
 
 template.innerHTML = `
     <style>
-        /* The component's host element (<font-preview>) */
         :host {
             display: block;
             position: relative;
@@ -49,7 +48,6 @@ template.innerHTML = `
             color: var(--selection-color);
         }
 
-        /* The controls bar, positioned on top */
         .controls {
             position: absolute;
             top: 32px;
@@ -73,14 +71,12 @@ template.innerHTML = `
             gap: 12px;
         }
         
-        /* --- FIXED RANGE INPUT THEME --- */
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
             width: 150px;
             height: 4px;
             background: transparent;
-            /* Use CSS custom property instead of currentColor */
             border: 2px solid var(--slider-color);
             border-radius: 2px;
             transition: box-shadow 0.2s, border-color 0.3s;
@@ -96,7 +92,6 @@ template.innerHTML = `
             appearance: none;
             width: 20px;
             height: 20px;
-            /* Use CSS custom property instead of currentColor */
             background: var(--slider-color);
             cursor: pointer;
             border-radius: 50%;
@@ -106,9 +101,8 @@ template.innerHTML = `
         input[type="range"]::-moz-range-thumb {
             width: 20px;
             height: 20px;
-            /* Use CSS custom property instead of currentColor */
             background: var(--slider-color);
-            border: none; /* Reset Firefox default border */
+            border: none;
             cursor: pointer;
             border-radius: 50%;
             transition: background-color 0.3s;
@@ -135,6 +129,7 @@ template.innerHTML = `
             outline-offset: 2px;
         }
     </style>
+
     <div class="previewer-wrapper">
         <div class="controls">
             <div class="control-group">
@@ -216,15 +211,12 @@ class FontPreview extends HTMLElement {
     applyTheme() {
         const theme = this.themes[this.currentThemeIndex];
 
-        // Apply the main theme colors to the host element
         this.style.backgroundColor = theme.background;
         this.style.color = theme.color;
 
-        // Set the CSS variables for the ::selection pseudo-element
         this.style.setProperty('--selection-bg', theme.selectionBg);
         this.style.setProperty('--selection-color', theme.selectionColor);
         
-        // Set the CSS variable for slider colors
         this.style.setProperty('--slider-color', theme.sliderColor);
     }
 }
