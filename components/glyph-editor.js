@@ -80,7 +80,7 @@
             }
         </style>
         
-        <p>The font is constructed by growing elongated hexagons on a grid. Try for yourself by clicking in the corner of one rectangle and then in another.</p>
+        <p>Epitax is constructed by growing elongated hexagons on a grid. Create your own by clicking in the corner of one rectangle on the grid and then in another.</p>
         <svg class="artboard" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid meet"></svg>
         <div class="controls">
             <button id="reset-button" class="button">Reset</button>
