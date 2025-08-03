@@ -106,8 +106,18 @@ class FontEditorApp {
         return oldState;
     }
 
+    _sanitizeFilename(name) {
+        if (!name || name.trim() === "") {
+            return "Untitled-Font";
+        }
+        // Replace spaces with hyphens.
+        const withHyphens = name.trim().replace(/\s+/g, '-');
+
+        // Remove any character that isn't a letter, number, hyphen, or period.
+        return withHyphens.replace(/[^a-zA-Z0-9-.]/g, '');
+    }
+
     initDOM() {
-        // [NEW] Set the font name input's value from the loaded state.
         document.getElementById('fontNameInput').value = this.appState.fontSettings.familyName;
 
         this.container.innerHTML = '';
@@ -139,12 +149,12 @@ class FontEditorApp {
     }
 
     setupGlobalListeners() {
-        // [MODIFIED] Use a custom download function to set the file name.
+        // [MODIFIED] Sanitize the font name for the downloaded file.
         document.getElementById('downloadButton').addEventListener('click', () => {
             const font = this.createFont();
             if (font) {
-                const fontName = this.appState.fontSettings.familyName || "UntitledFont";
-                font.download(fontName + '.otf'); // opentype.js download() supports a filename.
+                const safeFilename = this._sanitizeFilename(this.appState.fontSettings.familyName);
+                font.download(`${safeFilename}.otf`);
             }
         });
 
@@ -155,15 +165,15 @@ class FontEditorApp {
             }
         });
 
-        // [MODIFIED] Use the font name for the exported JSON file.
+        // [MODIFIED] Sanitize the JSON filename on export.
         document.getElementById('downloadDataButton').addEventListener('click', () => {
             const dataStr = JSON.stringify(this.appState, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const fileName = this.appState.fontSettings.familyName || "UntitledFont";
-            a.download = `${fileName}.json`;
+            const safeFilename = this._sanitizeFilename(this.appState.fontSettings.familyName);
+            a.download = `${safeFilename}.json`;
             a.click();
             URL.revokeObjectURL(url);
         });
@@ -194,11 +204,9 @@ class FontEditorApp {
             reader.readAsText(file);
             fileInput.value = '';
         });
-        
-        // [NEW] Add listener for the font name input field.
+
         document.getElementById('fontNameInput').addEventListener('input', (event) => {
             this.appState.fontSettings.familyName = event.target.value;
-            // State is saved automatically by the setInterval.
         });
     }
 
@@ -272,7 +280,6 @@ class FontEditorApp {
             return null;
         }
 
-        // [MODIFIED] Use the font name from the state when creating the font object.
         const font = new opentype.Font({
             familyName: this.appState.fontSettings.familyName,
             styleName: this.appState.fontSettings.styleName,
