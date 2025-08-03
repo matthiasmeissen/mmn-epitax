@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMN Epitax - Editor</title>
+    <link rel="stylesheet" href="editor.css">
+    <script src="https://unpkg.com/opentype.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+</head>
+
+<body>
+    <div class="global-actions">
+        <input type="text" id="fontNameInput" placeholder="Enter Font Name Here">
+        <button id="downloadButton">Download Font</button>
+        <button id="downloadDataButton">Export Data</button>
+        <button id="uploadDataButton">Import Data</button>
+        <input type="file" id="fileInput" accept=".json" style="display: none;" />
+        <button id="resetAppButton">Start New Font</button>
+    </div>
+    <div id="artboard-container"></div>
+    <script src="main.js"></script>
+</body>
+
+</html>

@@ -5,22 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMN Epitax</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/opentype.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.17/paper-full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <div class="global-actions">
-        <input type="text" id="fontNameInput" placeholder="Enter Font Name Here">
-        <button id="downloadButton">Download Font</button>
-        <button id="downloadDataButton">Export Data</button>
-        <button id="uploadDataButton">Import Data</button>
-        <input type="file" id="fileInput" accept=".json" style="display: none;" />
-        <button id="resetAppButton">Start New Font</button>
-    </div>
-    <div id="artboard-container"></div>
-    <script src="main.js"></script>
+    <section class="intro">
+        <h1 class="title">MMN Epitax</h1>
+        <p>A geometric typeface grown on grid substrate.</p>
+        <div class="button-group">
+            <a class="button" href="assets/MMN-Epitax-v0.1.0.otf" download>Download MMN Epitax</a>
+            <a class="button" href="editor.html" target="_blank">Create your own</a>
+        </div>
+    </section>
 </body>
 
 </html>
