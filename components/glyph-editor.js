@@ -1,5 +1,4 @@
-// IIFE wrapper to prevent global scope conflicts
-(function() {
+(function () {
 
     const template = document.createElement('template');
 
@@ -101,7 +100,7 @@
             this.COLS = 6;
             this.ROWS = 8;
             this.CELL_SIZE = 100;
-            
+
             this.firstSelection = null;
             this.previewPolyline = null;
         }
@@ -116,7 +115,7 @@
 
             this.resetButton.addEventListener('click', this.handleResetClick);
             this.downloadButton.addEventListener('click', this.handleDownloadClick);
-            
+
             this.createGrid();
         }
 
@@ -165,7 +164,7 @@
                 this.resetSelection();
             }
         }
-        
+
         getVerticesFromClick(cell, clickX, clickY) {
             const cellX = parseInt(cell.dataset.x, 10) * this.CELL_SIZE;
             const cellY = parseInt(cell.dataset.y, 10) * this.CELL_SIZE;
@@ -201,12 +200,12 @@
             shape.setAttribute('class', 'generated-shape');
             this.artboard.appendChild(shape);
         }
-        
+
         resetSelection() {
             this.firstSelection = null;
             if (this.previewPolyline) { this.artboard.removeChild(this.previewPolyline); this.previewPolyline = null; }
         }
-        
+
         resetAll() { this.createGrid(); this.resetSelection(); }
 
         // --- FINAL EXPORT FUNCTION ---
@@ -242,7 +241,7 @@
                     stroke: none;
                 }
             `;
-            
+
             const defs = document.createElementNS(this.svgNS, 'defs');
             defs.appendChild(style);
             svgToExport.prepend(defs);
@@ -251,12 +250,12 @@
             const svgString = serializer.serializeToString(svgToExport);
             const blob = new Blob([svgString], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = 'glyph.svg';
             document.body.appendChild(a);
-a.click();
+            a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }

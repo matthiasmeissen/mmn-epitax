@@ -1,6 +1,8 @@
-const template = document.createElement('template');
+(function () {
 
-template.innerHTML = `
+    const template = document.createElement('template');
+
+    template.innerHTML = `
     <style>
         :host {
             display: block;
@@ -38,7 +40,7 @@ template.innerHTML = `
             
             text-align: center;
             font-size: 48px;
-            line-height: 1.2;
+            line-height: 1.1;
             outline: none;
             overflow: hidden;
         }
@@ -133,92 +135,93 @@ template.innerHTML = `
     <div class="previewer-wrapper">
         <div class="controls">
             <div class="control-group">
-                <input type="range" id="font-size" min="16" max="250" value="48" />
+                <input type="range" id="font-size" min="16" max="250" value="120" />
                 <span id="font-size-value">48px</span>
             </div>
             <div class="control-group">
                 <button id="theme-toggle" class="theme-button">Toggle Theme</button>
             </div>
         </div>
-        <div id="text-editor" class="text-editor" contenteditable="true">Type anything</div>
+        <div id="text-editor" class="text-editor" contenteditable="true">Grown on substrate</div>
     </div>
 `;
 
-class FontPreview extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-        this.shadowRoot.appendChild(template.content.cloneNode(true));
+    class FontPreview extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+            this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        this.themes = [
-            { 
-                color: 'var(--color-foreground-primary)', 
-                background: 'var(--color-background-subtle)',
-                selectionColor: 'var(--color-background-primary)',
-                selectionBg: 'var(--color-foreground-accent)',
-                sliderColor: 'var(--color-foreground-primary)'
-            },
-            { 
-                color: 'var(--color-background-subtle)', 
-                background: 'var(--color-foreground-primary)',
-                selectionColor: 'var(--color-foreground-primary)',
-                selectionBg: 'var(--color-background-subtle)',
-                sliderColor: 'var(--color-background-subtle)'
-            },
-            { 
-                color: 'var(--color-foreground-accent)', 
-                background: 'var(--color-foreground-primary)',
-                selectionColor: 'var(--color-foreground-primary)',
-                selectionBg: 'var(--color-background-subtle)',
-                sliderColor: 'var(--color-foreground-accent)'
-            }
-        ];
-        this.currentThemeIndex = 0;
+            this.themes = [
+                {
+                    color: 'var(--color-foreground-accent)',
+                    background: 'var(--color-foreground-primary)',
+                    selectionColor: 'var(--color-foreground-primary)',
+                    selectionBg: 'var(--color-background-subtle)',
+                    sliderColor: 'var(--color-foreground-accent)'
+                },
+                {
+                    color: 'var(--color-foreground-primary)',
+                    background: 'var(--color-background-subtle)',
+                    selectionColor: 'var(--color-background-primary)',
+                    selectionBg: 'var(--color-foreground-accent)',
+                    sliderColor: 'var(--color-foreground-primary)'
+                },
+                {
+                    color: 'var(--color-background-subtle)',
+                    background: 'var(--color-foreground-primary)',
+                    selectionColor: 'var(--color-foreground-primary)',
+                    selectionBg: 'var(--color-background-subtle)',
+                    sliderColor: 'var(--color-background-subtle)'
+                }
+            ];
+            this.currentThemeIndex = 0;
 
-        this.boundUpdateFontSize = this.updateFontSize.bind(this);
-        this.boundToggleTheme = this.toggleTheme.bind(this);
+            this.boundUpdateFontSize = this.updateFontSize.bind(this);
+            this.boundToggleTheme = this.toggleTheme.bind(this);
+        }
+
+        connectedCallback() {
+            this.textEditor = this.shadowRoot.querySelector('#text-editor');
+            this.fontSizeSlider = this.shadowRoot.querySelector('#font-size');
+            this.fontSizeValue = this.shadowRoot.querySelector('#font-size-value');
+            this.themeToggleButton = this.shadowRoot.querySelector('#theme-toggle');
+
+            this.fontSizeSlider.addEventListener('input', this.boundUpdateFontSize);
+            this.themeToggleButton.addEventListener('click', this.boundToggleTheme);
+
+            this.updateFontSize();
+            this.applyTheme();
+        }
+
+        disconnectedCallback() {
+            this.fontSizeSlider.removeEventListener('input', this.boundUpdateFontSize);
+            this.themeToggleButton.removeEventListener('click', this.boundToggleTheme);
+        }
+
+        updateFontSize() {
+            const newSize = this.fontSizeSlider.value;
+            this.textEditor.style.fontSize = `${newSize}px`;
+            this.fontSizeValue.textContent = `${newSize}px`;
+        }
+
+        toggleTheme() {
+            this.currentThemeIndex = (this.currentThemeIndex + 1) % this.themes.length;
+            this.applyTheme();
+        }
+
+        applyTheme() {
+            const theme = this.themes[this.currentThemeIndex];
+
+            this.style.backgroundColor = theme.background;
+            this.style.color = theme.color;
+
+            this.style.setProperty('--selection-bg', theme.selectionBg);
+            this.style.setProperty('--selection-color', theme.selectionColor);
+
+            this.style.setProperty('--slider-color', theme.sliderColor);
+        }
     }
 
-    connectedCallback() {
-        this.textEditor = this.shadowRoot.querySelector('#text-editor');
-        this.fontSizeSlider = this.shadowRoot.querySelector('#font-size');
-        this.fontSizeValue = this.shadowRoot.querySelector('#font-size-value');
-        this.themeToggleButton = this.shadowRoot.querySelector('#theme-toggle');
-
-        this.fontSizeSlider.addEventListener('input', this.boundUpdateFontSize);
-        this.themeToggleButton.addEventListener('click', this.boundToggleTheme);
-
-        this.updateFontSize();
-        this.applyTheme();
-    }
-
-    disconnectedCallback() {
-        this.fontSizeSlider.removeEventListener('input', this.boundUpdateFontSize);
-        this.themeToggleButton.removeEventListener('click', this.boundToggleTheme);
-    }
-
-    updateFontSize() {
-        const newSize = this.fontSizeSlider.value;
-        this.textEditor.style.fontSize = `${newSize}px`;
-        this.fontSizeValue.textContent = `${newSize}px`;
-    }
-
-    toggleTheme() {
-        this.currentThemeIndex = (this.currentThemeIndex + 1) % this.themes.length;
-        this.applyTheme();
-    }
-    
-    applyTheme() {
-        const theme = this.themes[this.currentThemeIndex];
-
-        this.style.backgroundColor = theme.background;
-        this.style.color = theme.color;
-
-        this.style.setProperty('--selection-bg', theme.selectionBg);
-        this.style.setProperty('--selection-color', theme.selectionColor);
-        
-        this.style.setProperty('--slider-color', theme.sliderColor);
-    }
-}
-
-window.customElements.define('font-preview', FontPreview);
+    window.customElements.define('font-preview', FontPreview);
+})();
