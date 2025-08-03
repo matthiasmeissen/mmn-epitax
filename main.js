@@ -288,7 +288,7 @@ class FontEditorApp {
         const fontName = `MMN Epitax ${uniqueId}`;
 
         const font = new opentype.Font({
-            familyName: "MMN Epitax V0.1",
+            familyName: "MMN Epitax v0.1.0",
             styleName: this.appState.fontSettings.styleName,
             unitsPerEm: this.appState.fontSettings.unitsPerEm,
             ascender: this.appState.fontSettings.ascender,
