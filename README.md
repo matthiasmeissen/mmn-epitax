@@ -1,3 +1,3 @@
-# MMN Substrate
+# MMN Epitax
 
-Build fonts on substrate.
+A font system build on a grid.
