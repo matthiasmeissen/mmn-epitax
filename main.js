@@ -312,14 +312,12 @@ class GlyphView {
 
 
     createGrid() {
-        this.svg.innerHTML = ''; // Clear everything first
+        this.svg.innerHTML = '';
 
-        // Create a group for the grid cells to keep them organized
         const gridGroup = document.createElementNS(this.svgNS, 'g');
         gridGroup.setAttribute('class', 'grid-group');
         this.svg.appendChild(gridGroup);
 
-        // Loop through rows and columns to create the grid cells
         for (let y = 0; y < this.config.GRID_ROWS; y++) {
             for (let x = 0; x < this.config.GRID_COLS; x++) {
                 const cell = document.createElementNS(this.svgNS, 'rect');
@@ -341,22 +339,21 @@ class GlyphView {
         const baseline = document.createElementNS(this.svgNS, 'line');
         baseline.setAttribute('class', 'baseline');
         baseline.setAttribute('x1', 0);
-        baseline.setAttribute('y1', baselineY); // Use calculated value
+        baseline.setAttribute('y1', baselineY);
         baseline.setAttribute('x2', artboardWidth);
-        baseline.setAttribute('y2', baselineY); // Use calculated value
+        baseline.setAttribute('y2', baselineY);
         this.svg.appendChild(baseline);
 
         const xHeightLine = document.createElementNS(this.svgNS, 'line');
         xHeightLine.setAttribute('class', 'x-height-line');
         xHeightLine.setAttribute('x1', 0);
-        xHeightLine.setAttribute('y1', xHeightY); // Use calculated value
+        xHeightLine.setAttribute('y1', xHeightY);
         xHeightLine.setAttribute('x2', artboardWidth);
-        xHeightLine.setAttribute('y2', xHeightY); // Use calculated value
+        xHeightLine.setAttribute('y2', xHeightY);
         this.svg.appendChild(xHeightLine);
     }
 
     render(shapes) {
-        // First, remove all old shapes
         this.svg.querySelectorAll('.generated-shape').forEach(el => el.remove());
 
         shapes.forEach(shape => {
