@@ -25,6 +25,9 @@ body {
     background-color: var(--color-background-primary);
     color: var(--color-foreground-primary);
     padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
 section.intro {
@@ -72,4 +75,5 @@ section.intro {
 
 ::selection {
     background-color: var(--color-foreground-accent);
+    color: var(--color-background-primary);
 }
