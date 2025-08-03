@@ -1,4 +1,3 @@
-
 function parseSVGPath(pathData, opentypePath) {
     const commands = pathData.match(/[a-df-z][^a-df-z]*/ig);
     if (!commands) return;
@@ -7,94 +6,41 @@ function parseSVGPath(pathData, opentypePath) {
 
     commands.forEach(commandString => {
         const command = commandString[0];
-        // Split arguments by spaces or commas
         const args = commandString.slice(1).trim().split(/[\s,]+/).map(parseFloat).filter(n => !isNaN(n));
 
         switch (command) {
-            case 'M': // MoveTo (absolute)
-                currentX = args[0];
-                currentY = args[1];
-                opentypePath.moveTo(currentX, currentY);
-                break;
-            case 'm': // MoveTo (relative)
-                currentX += args[0];
-                currentY += args[1];
-                opentypePath.moveTo(currentX, currentY);
-                break;
-            case 'L': // LineTo (absolute)
-                currentX = args[0];
-                currentY = args[1];
-                opentypePath.lineTo(currentX, currentY);
-                break;
-            case 'l': // LineTo (relative)
-                currentX += args[0];
-                currentY += args[1];
-                opentypePath.lineTo(currentX, currentY);
-                break;
-            case 'H': // Horizontal LineTo (absolute)
-                currentX = args[0];
-                opentypePath.lineTo(currentX, currentY);
-                break;
-            case 'h': // Horizontal LineTo (relative)
-                currentX += args[0];
-                opentypePath.lineTo(currentX, currentY);
-                break;
-            case 'V': // Vertical LineTo (absolute)
-                currentY = args[0];
-                opentypePath.lineTo(currentX, currentY);
-                break;
-            case 'v': // Vertical LineTo (relative)
-                currentY += args[0];
-                opentypePath.lineTo(currentX, currentY);
-                break;
-            case 'Q': // Quadratic Bezier (absolute)
-                opentypePath.quadTo(args[0], args[1], args[2], args[3]);
-                currentX = args[2];
-                currentY = args[3];
-                break;
-            case 'q': // Quadratic Bezier (relative)
-                opentypePath.quadTo(currentX + args[0], currentY + args[1], currentX + args[2], currentY + args[3]);
-                currentX += args[2];
-                currentY += args[3];
-                break;
-            case 'C': // Cubic Bezier (absolute)
-                opentypePath.curveTo(args[0], args[1], args[2], args[3], args[4], args[5]);
-                currentX = args[4];
-                currentY = args[5];
-                break;
-            case 'c': // Cubic Bezier (relative)
-                opentypePath.curveTo(currentX + args[0], currentY + args[1], currentX + args[2], currentY + args[3], currentX + args[4], currentY + args[5]);
-                currentX += args[4];
-                currentY += args[5];
-                break;
-            case 'Z': // ClosePath
-            case 'z':
-                opentypePath.closePath();
-                break;
+            case 'M': currentX = args[0]; currentY = args[1]; opentypePath.moveTo(currentX, currentY); break;
+            case 'm': currentX += args[0]; currentY += args[1]; opentypePath.moveTo(currentX, currentY); break;
+            case 'L': currentX = args[0]; currentY = args[1]; opentypePath.lineTo(currentX, currentY); break;
+            case 'l': currentX += args[0]; currentY += args[1]; opentypePath.lineTo(currentX, currentY); break;
+            case 'H': currentX = args[0]; opentypePath.lineTo(currentX, currentY); break;
+            case 'h': currentX += args[0]; opentypePath.lineTo(currentX, currentY); break;
+            case 'V': currentY = args[0]; opentypePath.lineTo(currentX, currentY); break;
+            case 'v': currentY += args[0]; opentypePath.lineTo(currentX, currentY); break;
+            case 'Q': opentypePath.quadTo(args[0], args[1], args[2], args[3]); currentX = args[2]; currentY = args[3]; break;
+            case 'q': opentypePath.quadTo(currentX + args[0], currentY + args[1], currentX + args[2], currentY + args[3]); currentX += args[2]; currentY += args[3]; break;
+            case 'C': opentypePath.curveTo(args[0], args[1], args[2], args[3], args[4], args[5]); currentX = args[4]; currentY = args[5]; break;
+            case 'c': opentypePath.curveTo(currentX + args[0], currentY + args[1], currentX + args[2], currentY + args[3], currentX + args[4], currentY + args[5]); currentX += args[4]; currentY += args[5]; break;
+            case 'Z': case 'z': opentypePath.closePath(); break;
         }
     });
 }
 
-// --- MODEL (The Data) ---
-// --- MAIN APP (The Orchestrator) ---
 class FontEditorApp {
     constructor(containerId, initialGlyphs) {
         this.config = {
             GRID_ROWS: 8,
             GRID_COLS: 6,
             CELL_SIZE: 100,
-            DESCENDER_ROWS: 2, // Rows below the baseline
-            X_HEIGHT_ROWS: 4,  // Rows from baseline to x-height line (CHANGED from 3 to 4)
+            DESCENDER_ROWS: 2,
+            X_HEIGHT_ROWS: 4,
         };
 
         this.metrics = {
             artboardWidth: this.config.GRID_COLS * this.config.CELL_SIZE,
             artboardHeight: this.config.GRID_ROWS * this.config.CELL_SIZE,
-            // Calculate the baseline's Y position in the SVG coordinate system
             baselineY: (this.config.GRID_ROWS - this.config.DESCENDER_ROWS) * this.config.CELL_SIZE,
-            // The font's ascender value is the space above the baseline
             ascender: (this.config.GRID_ROWS - this.config.DESCENDER_ROWS) * this.config.CELL_SIZE,
-            // The font's descender value is the space below (must be negative)
             descender: -(this.config.DESCENDER_ROWS * this.config.CELL_SIZE),
         };
 
@@ -107,10 +53,6 @@ class FontEditorApp {
 
         setInterval(() => this.saveState(), 2000);
     }
-
-    //
-    // --- 1. STATE MANAGEMENT ---
-    //
 
     createInitialState(glyphs) {
         return {
@@ -134,19 +76,40 @@ class FontEditorApp {
     }
 
     loadState() {
-        const state = localStorage.getItem('fontDesignerState');
-        if (state) {
-            console.log("State loaded from localStorage.");
-            return JSON.parse(state);
+        const stateJSON = localStorage.getItem('fontDesignerState');
+        if (!stateJSON) return null;
+
+        let state = JSON.parse(stateJSON);
+
+        const firstGlyphWithShapes = state.glyphs.find(g => g.shapes && g.shapes.length > 0);
+        if (firstGlyphWithShapes) {
+            const firstShape = firstGlyphWithShapes.shapes[0];
+            if (firstShape && firstShape.vertices && typeof firstShape.vertices[0].x !== 'undefined') {
+                console.log("Old data format detected. Migrating to compact format...");
+                state = this._convertToCompactFormat(state);
+                this.saveState();
+            }
         }
-        return null;
+
+        console.log("State loaded from localStorage.");
+        return state;
     }
 
-    //
-    // --- 2. INITIALIZATION ---
-    //
+    _convertToCompactFormat(oldState) {
+        oldState.glyphs.forEach(glyph => {
+            if (glyph.shapes) {
+                glyph.shapes = glyph.shapes.map(shapeObj =>
+                    shapeObj.vertices.map(vertex => [vertex.x, vertex.y])
+                );
+            }
+        });
+        return oldState;
+    }
 
     initDOM() {
+        // [NEW] Set the font name input's value from the loaded state.
+        document.getElementById('fontNameInput').value = this.appState.fontSettings.familyName;
+
         this.container.innerHTML = '';
         this.appState.glyphs.forEach(glyphData => {
             const instanceDiv = document.createElement('div');
@@ -176,26 +139,68 @@ class FontEditorApp {
     }
 
     setupGlobalListeners() {
+        // [MODIFIED] Use a custom download function to set the file name.
         document.getElementById('downloadButton').addEventListener('click', () => {
             const font = this.createFont();
             if (font) {
-                font.download();
+                const fontName = this.appState.fontSettings.familyName || "UntitledFont";
+                font.download(fontName + '.otf'); // opentype.js download() supports a filename.
             }
         });
 
         document.getElementById('resetAppButton').addEventListener('click', () => {
-            const isConfirmed = confirm("Are you sure you want to start over? All unsaved work will be lost.");
-
-            if (isConfirmed) {
+            if (confirm("Are you sure you want to start over? All unsaved work will be lost.")) {
                 localStorage.removeItem('fontDesignerState');
                 window.location.reload();
             }
         });
-    }
 
-    //
-    // --- 3. STATE UPDATE METHODS (called by controllers) ---
-    //
+        // [MODIFIED] Use the font name for the exported JSON file.
+        document.getElementById('downloadDataButton').addEventListener('click', () => {
+            const dataStr = JSON.stringify(this.appState, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const fileName = this.appState.fontSettings.familyName || "UntitledFont";
+            a.download = `${fileName}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        const fileInput = document.getElementById('fileInput');
+        document.getElementById('uploadDataButton').addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedState = JSON.parse(e.target.result);
+                    if (importedState.fontSettings && importedState.glyphs) {
+                        this.appState = importedState;
+                        this.saveState();
+                        alert("Data imported successfully! The page will now reload.");
+                        window.location.reload();
+                    } else {
+                        alert("Invalid data file.");
+                    }
+                } catch (error) {
+                    alert("Failed to parse the data file. Please ensure it is a valid JSON.");
+                }
+            };
+            reader.readAsText(file);
+            fileInput.value = '';
+        });
+        
+        // [NEW] Add listener for the font name input field.
+        document.getElementById('fontNameInput').addEventListener('input', (event) => {
+            this.appState.fontSettings.familyName = event.target.value;
+            // State is saved automatically by the setInterval.
+        });
+    }
 
     addShapeToGlyph(character, shapeData) {
         const glyph = this.appState.glyphs.find(g => g.character === character);
@@ -215,27 +220,20 @@ class FontEditorApp {
 
     rerenderGlyph(character) {
         const controller = this.glyphControllers.find(c => c.character === character);
-        if (controller) {
-            controller.render();
-        }
+        if (controller) controller.render();
     }
-
-    //
-    // --- 4. FONT GENERATION (uses the state) ---
-    //
 
     mergePathsWithPaperJS(shapes) {
         const baselineY = this.metrics.baselineY;
-
         if (shapes.length === 0) return "";
 
         paper.setup(new paper.Size(this.metrics.artboardWidth, this.metrics.artboardHeight));
         let mergedPath = null;
 
-        shapes.forEach(shape => {
-            const pathPoints = shape.vertices.map(point => {
-                const finalY = baselineY - point.y;
-                return new paper.Point(point.x, finalY);
+        shapes.forEach(vertices => {
+            const pathPoints = vertices.map(point => {
+                const finalY = baselineY - point[1];
+                return new paper.Point(point[0], finalY);
             });
 
             const newPath = new paper.Path(pathPoints);
@@ -256,12 +254,9 @@ class FontEditorApp {
 
         this.appState.glyphs.forEach(glyphData => {
             const svgPathData = this.mergePathsWithPaperJS(glyphData.shapes);
-
             if (svgPathData && glyphData.character && !isNaN(glyphData.unicode)) {
                 const path = new opentype.Path();
-
                 parseSVGPath(svgPathData, path);
-
                 const glyph = new opentype.Glyph({
                     name: glyphData.character,
                     unicode: glyphData.unicode,
@@ -277,18 +272,9 @@ class FontEditorApp {
             return null;
         }
 
-        const now = new Date();
-        const year = String(now.getFullYear()).slice(-2);
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-
-        const uniqueId = `${year}${month}${day}-${hours}${minutes}`;
-        const fontName = `MMN Epitax ${uniqueId}`;
-
+        // [MODIFIED] Use the font name from the state when creating the font object.
         const font = new opentype.Font({
-            familyName: "MMN Epitax v0.1.0",
+            familyName: this.appState.fontSettings.familyName,
             styleName: this.appState.fontSettings.styleName,
             unitsPerEm: this.appState.fontSettings.unitsPerEm,
             ascender: this.appState.fontSettings.ascender,
@@ -300,20 +286,16 @@ class FontEditorApp {
     }
 }
 
-// --- VIEW (The Renderer) ---
 class GlyphView {
     constructor(svgElement, config) {
         this.svg = svgElement;
         this.svgNS = "http://www.w3.org/2000/svg";
         this.config = config;
-
         this.createGrid();
     }
 
-
     createGrid() {
         this.svg.innerHTML = '';
-
         const gridGroup = document.createElementNS(this.svgNS, 'g');
         gridGroup.setAttribute('class', 'grid-group');
         this.svg.appendChild(gridGroup);
@@ -338,27 +320,22 @@ class GlyphView {
 
         const baseline = document.createElementNS(this.svgNS, 'line');
         baseline.setAttribute('class', 'baseline');
-        baseline.setAttribute('x1', 0);
-        baseline.setAttribute('y1', baselineY);
-        baseline.setAttribute('x2', artboardWidth);
-        baseline.setAttribute('y2', baselineY);
+        baseline.setAttribute('x1', 0); baseline.setAttribute('y1', baselineY);
+        baseline.setAttribute('x2', artboardWidth); baseline.setAttribute('y2', baselineY);
         this.svg.appendChild(baseline);
 
         const xHeightLine = document.createElementNS(this.svgNS, 'line');
         xHeightLine.setAttribute('class', 'x-height-line');
-        xHeightLine.setAttribute('x1', 0);
-        xHeightLine.setAttribute('y1', xHeightY);
-        xHeightLine.setAttribute('x2', artboardWidth);
-        xHeightLine.setAttribute('y2', xHeightY);
+        xHeightLine.setAttribute('x1', 0); xHeightLine.setAttribute('y1', xHeightY);
+        xHeightLine.setAttribute('x2', artboardWidth); xHeightLine.setAttribute('y2', xHeightY);
         this.svg.appendChild(xHeightLine);
     }
 
     render(shapes) {
         this.svg.querySelectorAll('.generated-shape').forEach(el => el.remove());
-
-        shapes.forEach(shape => {
+        shapes.forEach(vertices => {
             const polygon = document.createElementNS(this.svgNS, 'polygon');
-            const pointsStr = shape.vertices.map(p => `${p.x},${p.y}`).join(' ');
+            const pointsStr = vertices.map(p => `${p[0]},${p[1]}`).join(' ');
             polygon.setAttribute('points', pointsStr);
             polygon.setAttribute('class', 'generated-shape');
             this.svg.appendChild(polygon);
@@ -368,7 +345,7 @@ class GlyphView {
     drawPreview(vertices) {
         this.removePreview();
         const previewPolyline = document.createElementNS(this.svgNS, 'polyline');
-        const pointsStr = vertices.map(p => `${p.x},${p.y}`).join(' ');
+        const pointsStr = vertices.map(p => `${p[0]},${p[1]}`).join(' ');
         previewPolyline.setAttribute('points', pointsStr);
         previewPolyline.setAttribute('class', 'selection-preview');
         this.svg.appendChild(previewPolyline);
@@ -376,22 +353,17 @@ class GlyphView {
 
     removePreview() {
         const existingPreview = this.svg.querySelector('.selection-preview');
-        if (existingPreview) {
-            existingPreview.remove();
-        }
+        if (existingPreview) existingPreview.remove();
     }
 }
 
-// --- CONTROLLER (The Logic) ---
 class GlyphController {
     constructor(glyphData, domElements, app, config) {
         this.character = glyphData.character;
         this.dom = domElements;
         this.app = app;
-
         this.config = config;
         this.view = new GlyphView(this.dom.svg, config);
-
         this.firstSelection = null;
         this.attachEventListeners();
         this.render();
@@ -438,7 +410,7 @@ class GlyphController {
 
             const [p1, , p3] = this.firstSelection.vertices;
             const [q1, , q3] = secondVertices;
-            const distSq = (p1, p2) => Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2);
+            const distSq = (p1, p2) => Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2);
 
             const pairing1_dist = distSq(p1, q1) + distSq(p3, q3);
             const pairing2_dist = distSq(p1, q3) + distSq(p3, q1);
@@ -447,9 +419,7 @@ class GlyphController {
                 ? [...this.firstSelection.vertices, ...[...secondVertices].reverse()]
                 : [...this.firstSelection.vertices, ...secondVertices];
 
-            const newShape = { id: `shape-${Date.now()}`, vertices: allVertices };
-            this.app.addShapeToGlyph(this.character, newShape);
-
+            this.app.addShapeToGlyph(this.character, allVertices);
             this.resetSelection();
         }
     }
@@ -464,7 +434,14 @@ class GlyphController {
 
         const cellX = parseInt(cell.dataset.x, 10) * CELL_SIZE;
         const cellY = parseInt(cell.dataset.y, 10) * CELL_SIZE;
-        const corners = { tl: { x: cellX, y: cellY }, tr: { x: cellX + CELL_SIZE, y: cellY }, bl: { x: cellX, y: cellY + CELL_SIZE }, br: { x: cellX + CELL_SIZE, y: cellY + CELL_SIZE } };
+
+        const corners = {
+            tl: [cellX, cellY],
+            tr: [cellX + CELL_SIZE, cellY],
+            bl: [cellX, cellY + CELL_SIZE],
+            br: [cellX + CELL_SIZE, cellY + CELL_SIZE]
+        };
+
         const isTop = clickY < CELL_SIZE / 2;
         const isLeft = clickX < CELL_SIZE / 2;
         const key = `${isTop ? 't' : 'b'}${isLeft ? 'l' : 'r'}`;
@@ -480,22 +457,15 @@ class GlyphController {
     }
 }
 
-// --- APP INITIALIZATION ---
-
 function createAsciiGlyphSet() {
     const glyphs = [];
-    // Printable ASCII characters range from 33 (!) to 126 (~)
     for (let i = 33; i <= 126; i++) {
-        glyphs.push({
-            letter: String.fromCharCode(i),
-            unicode: i
-        });
+        glyphs.push({ letter: String.fromCharCode(i), unicode: i });
     }
     return glyphs;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const initialGlyphSet = createAsciiGlyphSet();
-
     new FontEditorApp('artboard-container', initialGlyphSet);
 });
